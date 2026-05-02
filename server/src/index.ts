@@ -7,6 +7,7 @@ import { initSocket } from './socket/index.js'
 import authRouter from './routes/auth.js'
 import usersRouter from './routes/users.js'
 import leaderboardRouter from './routes/leaderboard.js'
+import healthcheckRouter from './routes/healthcheck.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -21,6 +22,7 @@ app.use(express.json())
 app.use('/api/auth', authRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/leaderboard', leaderboardRouter)
+app.use('/api/healthcheck', healthcheckRouter)
 
 initSocket(io)
 
