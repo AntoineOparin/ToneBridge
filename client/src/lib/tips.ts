@@ -98,9 +98,14 @@ export const TIPS: Tip[] = [
     text: "That's it! Your ear just felt the shape of that note — keep that feeling.",
   },
   {
-    id: 'mastered',
-    triggers: ['mastered'],
-    text: 'Mastered! That note now lives rent-free in your auditory memory. On to the next pillar.',
+    id: 'level-up',
+    triggers: ['level-up'],
+    text: 'Level up! New notes are coming — your ear just expanded its vocabulary.',
+  },
+  {
+    id: 'level-up-sharps',
+    triggers: ['level-up'],
+    text: 'Sharps and flats live *between* the white keys. Their character is "leaning" — half-steps in motion.',
   },
 
   // --- Idle encouragement ---
@@ -146,7 +151,7 @@ export function pickTipForMiss(
 }
 
 export function pickTipFor(
-  trigger: 'lesson-start' | 'idle' | 'mastered' | 'first-correct',
+  trigger: 'lesson-start' | 'idle' | 'level-up' | 'first-correct',
   lastShownId: string | null,
   context?: { note?: NoteName },
 ): Tip {

@@ -3,46 +3,73 @@ import type { Tip } from '../../types'
 
 interface ForteProps {
   tip: Tip | null
+  onDismiss?: () => void
   /** Optional state hint that affects facial expression / glow. */
   mood?: 'happy' | 'thinking' | 'cheering' | 'concerned'
 }
 
 /**
- * Forte — the resident pitch mascot. He's an anthropomorphic tuning fork
- * with a friendly face, anchored bottom-right of the practice page. When
- * the tip-bot has something to say, a speech bubble pops in above his head.
+ * Forte — the resident pitch mascot. The tip "speech bubble" is rendered as
+ * a top-of-page toast banner so it never overlaps the round content. The
+ * mascot avatar floats in the bottom-right purely for personality and
+ * pulses gently when there is an active tip.
  */
-export default function Forte({ tip, mood = 'happy' }: ForteProps) {
+export default function Forte({ tip, onDismiss, mood = 'happy' }: ForteProps) {
   return (
-    <div className="pointer-events-none fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+    <>
+      {/* Top toast — sits below the nav, never blocks the round area. */}
       <AnimatePresence>
         {tip && (
           <motion.div
             key={tip.id}
-            initial={{ opacity: 0, y: 12, scale: 0.92 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="pointer-events-auto max-w-xs rounded-2xl border border-surface-700 bg-surface-800/95 px-4 py-3 shadow-xl shadow-black/40 backdrop-blur"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-none fixed inset-x-0 top-20 z-40 flex justify-center px-4"
           >
-            <p className="text-sm font-medium text-surface-100 leading-snug">{tip.text}</p>
-            {tip.detail && (
-              <p className="mt-1.5 text-xs text-surface-400 leading-snug">{tip.detail}</p>
-            )}
-            <div className="absolute -bottom-1.5 right-8 h-3 w-3 rotate-45 border-b border-r border-surface-700 bg-surface-800/95" />
+            <div className="pointer-events-auto flex w-full max-w-2xl items-start gap-3 rounded-2xl border border-surface-700 bg-surface-800/95 p-3 pr-4 shadow-xl shadow-black/40 backdrop-blur">
+              <div className="shrink-0">
+                <ForteAvatar mood={mood} size={44} />
+              </div>
+              <div className="min-w-0 flex-1 pt-1">
+                <p className="text-sm font-semibold leading-snug text-surface-100">{tip.text}</p>
+                {tip.detail && (
+                  <p className="mt-1 text-xs text-surface-400 leading-snug">{tip.detail}</p>
+                )}
+              </div>
+              {onDismiss && (
+                <button
+                  onClick={onDismiss}
+                  aria-label="Dismiss tip"
+                  className="shrink-0 rounded-md p-1 text-surface-400 transition-colors hover:bg-surface-700/60 hover:text-white"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M4 4l8 8M12 4l-8 8" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <motion.div
-        animate={{
-          y: mood === 'cheering' ? [-2, -10, -2] : [0, -4, 0],
-        }}
-        transition={{ duration: mood === 'cheering' ? 0.5 : 3, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <ForteAvatar mood={mood} />
-      </motion.div>
-    </div>
+      {/* Mascot — fixed bottom-right, small. Pulses gently when a tip is active. */}
+      <div className="pointer-events-none fixed bottom-6 right-6 z-30">
+        <motion.div
+          animate={{
+            y: mood === 'cheering' ? [-2, -10, -2] : [0, -4, 0],
+            scale: tip ? [1, 1.05, 1] : 1,
+          }}
+          transition={{
+            y: { duration: mood === 'cheering' ? 0.5 : 3, repeat: Infinity, ease: 'easeInOut' },
+            scale: { duration: 1.5, repeat: tip ? Infinity : 0, ease: 'easeInOut' },
+          }}
+        >
+          <ForteAvatar mood={mood} size={72} />
+        </motion.div>
+      </div>
+    </>
   )
 }
 

@@ -9,7 +9,7 @@ interface UseTipBotResult {
   reportMiss: (note: NoteName, miss: MissPattern, recentMisses: MissPattern[]) => void
   /** Trigger a fixed-context tip (lesson start, mastered, idle, etc.). */
   showContext: (
-    trigger: 'lesson-start' | 'mastered' | 'first-correct' | 'idle',
+    trigger: 'lesson-start' | 'level-up' | 'first-correct' | 'idle',
     context?: { note?: NoteName },
   ) => void
   /** Manually clear the bubble. */
@@ -59,7 +59,7 @@ export function useTipBot(): UseTipBotResult {
 
   const showContext = useCallback(
     (
-      trigger: 'lesson-start' | 'mastered' | 'first-correct' | 'idle',
+      trigger: 'lesson-start' | 'level-up' | 'first-correct' | 'idle',
       context?: { note?: NoteName },
     ) => {
       const next = pickTipFor(trigger, lastIdRef.current, context)

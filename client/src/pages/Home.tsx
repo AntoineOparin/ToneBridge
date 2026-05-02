@@ -3,19 +3,17 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useStore } from '../store/useStore'
 import { ForteAvatar } from '../components/character/Forte'
-import { CURRICULUM, MASTERY_THRESHOLD } from '../lib/constants'
-import { isMastered } from '../lib/curriculum'
+import { LEVELS, MAX_LEVEL } from '../lib/constants'
+import { currentLevel, hasSeenTutorial, levelProgressPct } from '../lib/curriculum'
 import { prettyNote } from '../lib/noteUtils'
 
 export default function Home() {
   const xp = useStore((s) => s.xp)
   const practice = useStore((s) => s.practice)
 
-  const masteredCount = CURRICULUM.filter((n) => isMastered(practice.notes[n])).length
-  const focusNote = CURRICULUM[Math.min(practice.focusIndex, CURRICULUM.length - 1)]
-  const focusMasteryPct = Math.round(
-    (practice.notes[focusNote].mastery / MASTERY_THRESHOLD) * 100,
-  )
+  const level = currentLevel(practice)
+  const pct = levelProgressPct(practice)
+  const isFirstTime = !hasSeenTutorial(practice, 1) && practice.level === 1 && practice.levelXp === 0
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -26,7 +24,6 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,158,11,0.10),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-surface-950/40 to-transparent" />
 
-      {/* Nav */}
       <header className="relative z-10 flex items-center justify-between px-8 py-6">
         <Link to="/home" className="text-2xl font-bold tracking-tight text-brand-400">
           ToneBridge
@@ -51,7 +48,6 @@ export default function Home() {
       </header>
 
       <main className="relative z-10 mx-auto max-w-6xl px-8 pb-24">
-        {/* Greeting */}
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -66,11 +62,11 @@ export default function Home() {
               Build your <span className="text-brand-400">pitch</span> bridge.
             </h1>
             <p className="mt-3 max-w-lg text-lg text-surface-300">
-              {masteredCount === 0
-                ? "Let's lay the first plank — start with a single note."
-                : masteredCount === CURRICULUM.length
-                ? 'Every note in the octave is yours. Sharpen your ear with a duel.'
-                : `${masteredCount} of ${CURRICULUM.length} notes mastered. Keep going.`}
+              {isFirstTime
+                ? "Hit Practice — Forte will introduce the first three notes."
+                : practice.level === MAX_LEVEL && pct >= 100
+                ? 'Every bridge built. Sharpen your ear with a duel.'
+                : `Level ${practice.level} of ${MAX_LEVEL} — ${level.title}.`}
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -81,7 +77,6 @@ export default function Home() {
           </div>
         </motion.section>
 
-        {/* CTA cards */}
         <section className="grid gap-5 md:grid-cols-3">
           {/* Practice — primary CTA */}
           <motion.div
@@ -99,48 +94,54 @@ export default function Home() {
                   Singleplayer
                 </span>
                 <h2 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
-                  Practice with Forte
+                  {isFirstTime ? 'Start with Forte' : 'Continue practicing'}
                 </h2>
                 <p className="mt-2 max-w-md text-surface-300">
-                  Train your ears note-by-note. Sing the pitch, name the pitch, master each step,
-                  and watch the bridge build itself.
+                  {isFirstTime
+                    ? 'A short tutorial introduces every note in the level, then practice begins.'
+                    : `${practice.levelXp} / ${level.xpToComplete} reps this level. Reach the next bridge to unlock new notes.`}
                 </p>
 
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <div className="rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 px-6 py-3 font-bold text-white shadow-lg shadow-brand-500/25 transition-shadow group-hover:shadow-brand-500/40">
-                    Start practice →
+                    {isFirstTime ? 'Start tutorial →' : 'Continue →'}
                   </div>
                   <span className="text-sm text-surface-400">
-                    Currently on <span className="font-semibold text-brand-400">{prettyNote(focusNote)}</span> · {focusMasteryPct}%
+                    Level <span className="font-semibold text-brand-400">{practice.level}</span> · {pct}% to next bridge
                   </span>
                 </div>
 
-                {/* Curriculum mini-strip */}
+                {/* Level strip */}
                 <div className="mt-6 flex flex-wrap gap-1.5">
-                  {CURRICULUM.map((note) => {
-                    const mastered = isMastered(practice.notes[note])
-                    const isFocus = note === focusNote
+                  {LEVELS.map((lvl) => {
+                    const cleared = practice.level > lvl.id
+                    const active = practice.level === lvl.id
                     return (
                       <div
-                        key={note}
-                        className={`flex h-7 w-7 items-center justify-center rounded-md border text-[10px] font-bold ${
-                          mastered
+                        key={lvl.id}
+                        className={`flex h-7 min-w-[28px] items-center justify-center rounded-md border px-2 text-[10px] font-bold ${
+                          cleared
                             ? 'border-brand-500 bg-brand-500/20 text-brand-300'
-                            : isFocus
+                            : active
                             ? 'border-brand-500 text-white'
                             : 'border-surface-700 bg-surface-900/60 text-surface-500'
                         }`}
+                        title={lvl.title}
                       >
-                        {prettyNote(note).slice(0, -1)}
+                        L{lvl.id}
                       </div>
                     )
                   })}
+                </div>
+
+                {/* Notes in current level */}
+                <div className="mt-3 text-xs text-surface-400">
+                  This level: {level.notes.map((n) => prettyNote(n)).join(' · ')}
                 </div>
               </div>
             </Link>
           </motion.div>
 
-          {/* Multiplayer */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -162,7 +163,6 @@ export default function Home() {
             </Link>
           </motion.div>
 
-          {/* Profile */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -184,7 +184,6 @@ export default function Home() {
             </Link>
           </motion.div>
 
-          {/* Learn */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

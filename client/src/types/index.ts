@@ -31,33 +31,44 @@ export type MissPattern =
   | 'fifth-confusion'
   | 'random'
 
-export interface NoteProgress {
-  /** mastery score 0..100 */
-  mastery: number
-  /** total correct answers across both modes */
+export interface PracticeLevel {
+  /** 1-indexed level number. */
+  id: number
+  title: string
+  /** Short flavour line shown in the level header / tutorial. */
+  description: string
+  /** Every note that can appear as a target / option at this level. */
+  notes: NoteName[]
+  /** Notes added vs the previous level — highlighted on level-up. */
+  newNotes: NoteName[]
+  /** Correct answers required to clear this level. */
+  xpToComplete: number
+}
+
+export interface NoteStats {
   correct: number
-  /** total incorrect answers */
   incorrect: number
-  /** rolling miss patterns for tip selection */
   recentMisses: MissPattern[]
 }
 
 export interface PracticeProgress {
-  /** index into CURRICULUM marking the active focus note */
-  focusIndex: number
-  /** per-note progress keyed by NoteName */
-  notes: Record<NoteName, NoteProgress>
-  /** current round-streak across all notes */
+  /** Current 1-indexed level the user is training. */
+  level: number
+  /** Correct answers earned within the current level. */
+  levelXp: number
+  /** Per-note running stats (used for tip targeting). */
+  notes: Partial<Record<NoteName, NoteStats>>
+  /** Round-streak across all notes. */
   streak: number
-  /** XP earned this session */
+  /** XP earned across the current session (for the HUD). */
   sessionXp: number
+  /** Levels for which the user has already seen the intro tutorial. */
+  tutorialCompleted: number[]
 }
 
 export interface Tip {
   id: string
-  /** which patterns/contexts this tip addresses */
-  triggers: Array<MissPattern | 'idle' | 'lesson-start' | 'mastered' | 'first-correct'>
+  triggers: Array<MissPattern | 'idle' | 'lesson-start' | 'level-up' | 'first-correct'>
   text: string
-  /** optional longer detail / mnemonic */
   detail?: string
 }
