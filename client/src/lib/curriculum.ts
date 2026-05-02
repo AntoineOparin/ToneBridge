@@ -89,6 +89,16 @@ export function applyCorrect(stats: NoteStats | undefined): NoteStats {
   return { ...base, correct: base.correct + 1 }
 }
 
+/** Mastery percentage (0..100) for a note: +5 per correct, -3 per incorrect. */
+export const MASTERY_PER_CORRECT = 5
+export const MASTERY_PER_INCORRECT = 3
+
+export function computeMastery(stats: NoteStats | undefined): number {
+  if (!stats) return 0
+  const raw = stats.correct * MASTERY_PER_CORRECT - stats.incorrect * MASTERY_PER_INCORRECT
+  return Math.max(0, Math.min(100, raw))
+}
+
 export function applyIncorrect(
   stats: NoteStats | undefined,
   miss: MissPattern,
