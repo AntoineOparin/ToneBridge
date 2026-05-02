@@ -1,8 +1,10 @@
-import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useStore } from '../store/useStore'
 import { ForteAvatar } from '../components/character/Forte'
+import MasteryBridge from '../components/bridge/MasteryBridge'
 import { LEVELS, MAX_LEVEL } from '../lib/constants'
 import { currentLevel, hasSeenTutorial, levelProgressPct } from '../lib/curriculum'
 import { prettyNote } from '../lib/noteUtils'
@@ -14,6 +16,7 @@ export default function Home() {
   const level = currentLevel(practice)
   const pct = levelProgressPct(practice)
   const isFirstTime = !hasSeenTutorial(practice, 1) && practice.level === 1 && practice.levelXp === 0
+  const [showBridge, setShowBridge] = useState(false)
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -215,7 +218,34 @@ export default function Home() {
             </Link>
           </motion.div>
         </section>
+        {/* Dev: play bridge animation */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="mt-8 flex justify-center"
+        >
+          <button
+            onClick={() => setShowBridge(true)}
+            className="rounded-xl border border-surface-700 bg-surface-800/60 px-4 py-2 text-sm font-semibold text-surface-300 transition-colors hover:border-brand-500 hover:text-brand-400"
+          >
+            Play bridge animation
+          </button>
+        </motion.div>
       </main>
+
+      <AnimatePresence>
+        {showBridge && (
+          <MasteryBridge
+            fromLevel={Math.max(1, practice.level - 1)}
+            fromTitle={LEVELS[Math.max(0, practice.level - 2)]?.title ?? 'First steps'}
+            toLevel={practice.level}
+            toTitle={level.title}
+            newNotes={level.notes.slice(0, 3)}
+            onComplete={() => setShowBridge(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -40,7 +40,7 @@ export default function NoteChallenge({
   onResult,
   showPopup = true,
 }: NoteChallengeProps) {
-  const audio = useAudio()
+  const { playNote, playCorrect, playWrong } = useAudio()
   const pitch = usePitchDetection()
 
   const targetHz = useMemo(() => parseNote(target).hz, [target])
@@ -86,8 +86,8 @@ export default function NoteChallenge({
           ? `That was ${result.answer.replace('#', '♯')}`
           : undefined,
       })
-      if (result.outcome === 'correct') void audio.playCorrect()
-      else void audio.playWrong()
+      if (result.outcome === 'correct') void playCorrect()
+      else void playWrong()
 
       // Stop the mic so the next round starts cleanly.
       if (singing) pitch.stop()
@@ -98,7 +98,7 @@ export default function NoteChallenge({
         onResult(result)
       }, 1100)
     },
-    [audio, onResult, pitch, singing],
+    [playCorrect, playWrong, onResult, pitch, singing],
   )
 
   // Singing mode — track pitch and accumulate hold time. setState is the
@@ -164,8 +164,8 @@ export default function NoteChallenge({
 
   const handlePlayReference = useCallback(async () => {
     setHasPlayed(true)
-    await audio.playNote(target, 1.4)
-  }, [audio, target])
+    await playNote(target, 1.4)
+  }, [playNote, target])
 
   const handleStartSinging = useCallback(async () => {
     if (singing) return
@@ -205,15 +205,17 @@ export default function NoteChallenge({
     [finish, lockedAnswer, target, startTime],
   )
 
-  // Identify mode auto-plays the target shortly after the round opens.
+  // Identify mode: one automatic play shortly after the round opens (deps must not
+  // include the whole useAudio() object — it changes every render and would replay
+  // on every tip/state update from the parent).
   useEffect(() => {
     if (mode !== 'identify') return
     const id = window.setTimeout(() => {
-      void audio.playNote(target, 1.4)
+      void playNote(target, 1.4)
       setHasPlayed(true)
     }, 350)
     return () => clearTimeout(id)
-  }, [mode, target, audio])
+  }, [mode, target, playNote])
 
   return (
     <div className="relative flex w-full flex-col items-center gap-8">
@@ -266,7 +268,7 @@ export default function NoteChallenge({
       ) : (
         <div className="flex w-full flex-col items-center gap-5">
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button variant="secondary" onClick={() => audio.playNote(target, 1.4)}>
+            <Button variant="secondary" onClick={handlePlayReference}>
               {hasPlayed ? 'Replay' : 'Play note'}
             </Button>
             <Button variant="ghost" size="sm" onClick={handleSkip} disabled={revealed}>

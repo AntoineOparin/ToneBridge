@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as THREE from 'three'
 import { colors } from '../../lib/theme'
@@ -22,11 +22,9 @@ interface MasteryBridgeProps {
 
 /**
  * Level-up celebration. Side-on Three.js scene with two stone pillars (the
- * level you just cleared on the left, the next level on the right). The bridge
- * is broken; planks drop in from above with gravity + spin, settle with a
- * bounce, then a low-poly Forte walks across with a believable step cycle and
- * lights up the next pillar. Glowing glyphs of the newly unlocked notes float
- * up around it.
+ * level you just cleared on the left, the next level on the right). A low-poly
+ * Forte walks across with a believable step cycle and lights up the next pillar.
+ * Glowing glyphs of the newly unlocked notes float up around it.
  */
 export default function MasteryBridge({
   fromLevel,
@@ -38,8 +36,10 @@ export default function MasteryBridge({
 }: MasteryBridgeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const completedRef = useRef(false)
+  const [replayCount, setReplayCount] = useState(0)
 
   useEffect(() => {
+    completedRef.current = false
     const container = containerRef.current
     if (!container) return
 
@@ -165,44 +165,58 @@ export default function MasteryBridge({
     )
     scene.add(cable1, cable2)
 
-    // --- Planks with gravity-driven physics ----------------------------
-    const PLANK_COUNT = 11
-    const plankMat = new THREE.MeshStandardMaterial({
-      color: hex(colors.brand[700]),
-      roughness: 0.7,
+    // --- Parabolic bridge deck ------------------------------------------
+    const deckMat = new THREE.MeshStandardMaterial({
+      color: hex(colors.surface[600]),
+      roughness: 0.9,
+      metalness: 0.05,
     })
-    const plankGeo = new THREE.BoxGeometry(0.78, 0.12, 1.2)
+    const railMat = new THREE.MeshStandardMaterial({
+      color: hex(colors.surface[500]),
+      roughness: 0.7,
+      metalness: 0.3,
+    })
 
-    interface Plank {
-      mesh: THREE.Mesh
-      targetX: number
-      targetY: number
-      releaseAt: number
-      vy: number
-      vrot: number
-      rot: number
-      settled: boolean
-      bounceTime: number
+    const PILLAR_TOP = 1.45
+    const SAG = 0.55
+    const deckY = (x: number) => PILLAR_TOP - Math.sin(((x + 4) / 8) * Math.PI) * SAG
+    const deckSlope = (x: number) => {
+      const dt = 0.001
+      return (deckY(x + dt) - deckY(x - dt)) / (2 * dt)
     }
-    const planks: Plank[] = []
-    const buildStartMs = 700
-    const plankIntervalMs = 180
-    for (let i = 0; i < PLANK_COUNT; i++) {
-      const mesh = new THREE.Mesh(plankGeo, plankMat)
-      const targetX = -3.5 + (i / (PLANK_COUNT - 1)) * 7.0
-      mesh.visible = false
-      scene.add(mesh)
-      planks.push({
-        mesh,
-        targetX,
-        targetY: 0.18,
-        releaseAt: buildStartMs + i * plankIntervalMs,
-        vy: 0,
-        vrot: (Math.random() - 0.5) * 4,
-        rot: (Math.random() - 0.5) * 1.2,
-        settled: false,
-        bounceTime: 0,
-      })
+
+    const SEGMENTS = 20
+    const segWidth = 7.0 / SEGMENTS
+    const deckSegments: THREE.Mesh[] = []
+    for (let i = 0; i < SEGMENTS; i++) {
+      const x = -3.5 + (i + 0.5) * segWidth
+      const y = deckY(x)
+      const slope = deckSlope(x)
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.02, 0.08, 1.2), deckMat)
+      seg.position.set(x, y, 0.2)
+      seg.rotation.z = Math.atan(slope)
+      scene.add(seg)
+      deckSegments.push(seg)
+
+      const railH = 0.06
+      const railYOffset = 0.06 + railH / 2
+      const railLX = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.02, railH, 0.04), railMat)
+      railLX.position.set(
+        x - Math.sin(Math.atan(slope)) * railYOffset,
+        y + Math.cos(Math.atan(slope)) * railYOffset,
+        0.74,
+      )
+      railLX.rotation.z = Math.atan(slope)
+      scene.add(railLX)
+
+      const railRX = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.02, railH, 0.04), railMat)
+      railRX.position.set(
+        x - Math.sin(Math.atan(slope)) * railYOffset,
+        y + Math.cos(Math.atan(slope)) * railYOffset,
+        -0.34,
+      )
+      railRX.rotation.z = Math.atan(slope)
+      scene.add(railRX)
     }
 
     // --- Forte (low-poly with leg meshes for a real step cycle) --------
@@ -254,7 +268,7 @@ export default function MasteryBridge({
     legR.position.x = 0.09
 
     forte.add(body, head, prongL, prongR, eyeL, eyeR, bowtie, legL, legR)
-    forte.position.set(-4, 1.6, 0)
+    forte.position.set(-4, deckY(-4) + 0.02, 0)
     forte.scale.setScalar(0.85)
     scene.add(forte)
 
@@ -300,9 +314,7 @@ export default function MasteryBridge({
     })
 
     // --- Timeline -------------------------------------------------------
-    const lastPlankReleaseMs = buildStartMs + (PLANK_COUNT - 1) * plankIntervalMs
-    const allSettledMs = lastPlankReleaseMs + 900
-    const walkStartMs = allSettledMs + 200
+    const walkStartMs = 800
     const walkDurationMs = 2000
     const igniteAtMs = walkStartMs + walkDurationMs
     const finishAtMs = igniteAtMs + 1800
@@ -317,62 +329,33 @@ export default function MasteryBridge({
       const dt = (now - lastFrame) / 1000
       lastFrame = now
 
-      // -- Plank physics: gravity drop with bounce-settle ---------------
-      for (const p of planks) {
-        if (elapsed < p.releaseAt) continue
-        if (!p.mesh.visible) {
-          p.mesh.visible = true
-          p.mesh.position.set(p.targetX + (Math.random() - 0.5) * 0.3, 4, 0)
-          p.mesh.rotation.set(0, 0, p.rot)
-          p.vy = 0
-        }
-        if (!p.settled) {
-          // Falling phase: gravity + slow horizontal correction toward target X.
-          p.vy += -9.8 * dt
-          p.mesh.position.y += p.vy * dt
-          p.mesh.position.x += (p.targetX - p.mesh.position.x) * Math.min(1, dt * 4)
-          p.rot += p.vrot * dt
-          p.vrot *= 0.92
-          p.mesh.rotation.z = p.rot
-
-          if (p.mesh.position.y <= p.targetY) {
-            p.mesh.position.y = p.targetY
-            p.settled = true
-            p.bounceTime = 0
-            p.vy = -p.vy * 0.35 // first small bounce
-          }
-        } else {
-          // Settle: under-damped spring back to y=targetY, rotation back to 0.
-          p.bounceTime += dt
-          const k = Math.exp(-p.bounceTime * 6)
-          const oscillation = Math.sin(p.bounceTime * 18) * 0.08 * k
-          p.mesh.position.y = p.targetY + oscillation
-          p.mesh.position.x += (p.targetX - p.mesh.position.x) * Math.min(1, dt * 8)
-          p.rot += (0 - p.rot) * Math.min(1, dt * 6)
-          p.mesh.rotation.z = p.rot
-        }
-      }
-
       // -- Forte standing / walking / arrived --------------------------
       const stridePeriod = 0.45
       if (elapsed < walkStartMs) {
-        forte.position.y = 1.6 + Math.sin(elapsed * 0.005) * 0.04
+        const x0 = forte.position.x
+        const y0 = deckY(x0)
+        forte.position.y = y0 + 0.02 + Math.sin(elapsed * 0.005) * 0.04
         legL.rotation.x = 0
         legR.rotation.x = 0
       } else if (elapsed < igniteAtMs) {
         const t = (elapsed - walkStartMs) / walkDurationMs
         // ease-in-out cubic for smooth start/stop
         const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-        forte.position.x = -4 + 8 * eased
+        const x = -4 + 8 * eased
+        forte.position.x = x
+
+        // Follow the parabolic deck height.
+        const deckHeight = deckY(x)
 
         // Step bounce — quick vertical hop on each stride.
         const strideT = ((elapsed - walkStartMs) / 1000) % stridePeriod
         const stride = strideT / stridePeriod
-        const stepLift = Math.abs(Math.sin(stride * Math.PI)) * 0.18
-        forte.position.y = 1.6 + stepLift
+        const stepLift = Math.abs(Math.sin(stride * Math.PI)) * 0.12
+        forte.position.y = deckHeight + 0.02 + stepLift
 
-        // Lean very slightly forward into the walk.
-        forte.rotation.z = Math.sin(elapsed * 0.013) * 0.04
+        // Slight forward lean into the slope.
+        const slope = deckSlope(x)
+        forte.rotation.z = slope * 0.3 + Math.sin(elapsed * 0.013) * 0.02
 
         // Leg swing — opposing pendulum.
         const swing = Math.sin(stride * Math.PI * 2) * 0.55
@@ -380,14 +363,14 @@ export default function MasteryBridge({
         legR.rotation.x = -swing
       } else {
         forte.position.x = 4
-        forte.position.y = 1.6 + Math.sin(elapsed * 0.005) * 0.04
+        const yEnd = deckY(4)
+        forte.position.y = yEnd + 0.02 + Math.sin(elapsed * 0.005) * 0.04
         forte.rotation.z = 0
         legL.rotation.x = 0
         legR.rotation.x = 0
       }
 
       // -- Cap lighting ramps with progress ----------------------------
-      const buildProgress = Math.min(1, elapsed / allSettledMs)
       leftPillarLight.intensity = 4 + Math.sin(elapsed * 0.004) * 0.3
       const fromCol = (leftLevelLabel.material as THREE.SpriteMaterial).color
       fromCol.set(hex(colors.brand[400]))
@@ -425,8 +408,9 @@ export default function MasteryBridge({
           n.sprite.position.set(4 + n.offsetX, 2.4 + ns * 1.4, 0.4)
         })
       } else {
-        // Subtle build-progress glow on right pillar even before ignite.
-        rightPillarLight.intensity = 0.6 + buildProgress * 0.8
+        // Gentle idle glow on right pillar before ignite.
+        const preIgnite = Math.min(1, elapsed / walkStartMs)
+        rightPillarLight.intensity = 0.6 + preIgnite * 0.4
       }
 
       leftLevelLabel.position.y = 2.4 + Math.sin(elapsed * 0.002) * 0.06
@@ -468,7 +452,7 @@ export default function MasteryBridge({
         container.removeChild(renderer.domElement)
       }
     }
-  }, [fromLevel, toLevel, newNotes, onComplete])
+  }, [fromLevel, toLevel, newNotes, onComplete, replayCount])
 
   return (
     <motion.div
@@ -478,6 +462,14 @@ export default function MasteryBridge({
       transition={{ duration: 0.4 }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface-950/90 backdrop-blur-sm"
     >
+      {/* Dev replay control */}
+      <button
+        onClick={() => setReplayCount((c) => c + 1)}
+        className="absolute top-4 right-4 z-20 rounded-lg border border-surface-700 bg-surface-800/80 px-3 py-1.5 text-xs font-semibold text-surface-300 backdrop-blur transition-colors hover:border-brand-500 hover:text-brand-400"
+      >
+        Replay animation
+      </button>
+
       <AnimatePresence>
         <motion.div
           key="banner"
@@ -486,12 +478,14 @@ export default function MasteryBridge({
           transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="absolute top-10 z-10 text-center"
         >
-          <span className="block text-sm uppercase tracking-[0.4em] text-brand-400">
-            Level {fromLevel} cleared
-          </span>
-          <span className="mt-2 block text-5xl font-black tracking-tight text-white">
-            {fromTitle}
-          </span>
+          <div className="inline-block rounded-2xl border border-surface-800 bg-surface-900/60 px-8 py-4 backdrop-blur">
+            <span className="block text-sm uppercase tracking-[0.4em] text-brand-400">
+              Level {fromLevel} cleared
+            </span>
+            <span className="mt-2 block text-5xl font-black tracking-tight text-white">
+              {fromTitle}
+            </span>
+          </div>
         </motion.div>
 
         {toLevel && toTitle && (
@@ -500,17 +494,19 @@ export default function MasteryBridge({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.6 }}
-            className="absolute bottom-12 text-center text-surface-300"
+            className="absolute bottom-12 z-10 text-center"
           >
-            <span className="block text-xs uppercase tracking-[0.3em] text-surface-400">
-              Up next — Level {toLevel}
-            </span>
-            <span className="mt-1 block text-2xl font-bold text-brand-400">{toTitle}</span>
-            {newNotes.length > 0 && (
-              <span className="mt-1 block text-xs text-surface-400">
-                Adding {newNotes.map((n) => prettyNote(n)).join(', ')}
+            <div className="inline-block rounded-2xl border border-surface-800 bg-surface-900/60 px-8 py-4 backdrop-blur">
+              <span className="block text-xs uppercase tracking-[0.3em] text-surface-400">
+                Up next — Level {toLevel}
               </span>
-            )}
+              <span className="mt-1 block text-2xl font-bold text-brand-400">{toTitle}</span>
+              {newNotes.length > 0 && (
+                <span className="mt-1 block text-xs text-surface-400">
+                  Adding {newNotes.map((n) => prettyNote(n)).join(', ')}
+                </span>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,4 +1,5 @@
-import type { MissPattern, NoteName, Tip } from '../types'
+import type { MascotTipContext, MissPattern, NoteName, Tip } from '../types'
+import { prettyNote } from './noteUtils'
 
 /**
  * Tip catalog. Each tip is tagged with the patterns / contexts in which it is
@@ -119,6 +120,97 @@ export const TIPS: Tip[] = [
     triggers: ['idle'],
     text: 'Hum, then sing. Humming pre-locks your vocal cords on the right pitch.',
   },
+
+  // --- Mascot hover — quick micro-hints (Practice page, dwell on Forte) ---
+  {
+    id: 'mc-hover-breath',
+    triggers: ['mascot-hover'],
+    text: "I'm Forte — hover here whenever you need a whisper of wisdom.",
+    detail: 'One slow breath clears mental noise before you listen or sing.',
+  },
+  {
+    id: 'mc-hover-ear',
+    triggers: ['mascot-hover'],
+    text: 'Your ear learns faster when you guess wrong once — mistakes are data.',
+    detail: 'Replay the reference; imagine the shape before you answer.',
+  },
+  {
+    id: 'mc-hover-cents',
+    triggers: ['mascot-hover'],
+    text: 'Think in cents, not panic — tiny adjustments beat big jumps.',
+    detail: 'Sharp = pull back air; flat = brighten your vowel slightly.',
+  },
+  {
+    id: 'mc-hover-body',
+    triggers: ['mascot-hover'],
+    text: 'Shoulders down, jaw soft — your pitch lives in relaxation.',
+    detail: 'Tension creeps pitch sharp on almost everyone.',
+  },
+  {
+    id: 'mc-hover-interval',
+    triggers: ['mascot-hover'],
+    text: 'Intervals are friendships between notes — remember songs, not letters.',
+    detail: 'Hum a tune you know that starts with the same leap.',
+  },
+  {
+    id: 'mc-hover-streak',
+    triggers: ['mascot-hover'],
+    text: 'Streaks are fun, but accuracy beats speed every time.',
+    detail: 'Slow down one round if you feel rushed.',
+  },
+
+  // --- Mascot click — deeper coaching when you tap Forte ---
+  {
+    id: 'mc-click-coach',
+    triggers: ['mascot-click'],
+    text: "You've got this — I'm your pocket vocal coach.",
+    detail:
+      'Identify mode: eliminate obvious wrong tiles first, then compare finalists. Sing mode: hear the reference, hum, then sing on one steady breath.',
+  },
+  {
+    id: 'mc-click-identify',
+    triggers: ['mascot-click'],
+    text: 'Naming the note is pattern-matching — build a mental keyboard.',
+    detail:
+      'Ask: does it feel low in the chest or brighter above? That narrows register before letter.',
+  },
+  {
+    id: 'mc-click-sing',
+    triggers: ['mascot-click'],
+    text: 'Singing mode needs courage — tiny voice is OK.',
+    detail:
+      'Watch the cents meter: tiny corrections beat heroic scoops. Sustain half a second so pitchy can lock on.',
+  },
+  {
+    id: 'mc-click-register',
+    triggers: ['mascot-click'],
+    text: 'Octave slips happen when you recognise pitch class but pick the wrong octave.',
+    detail: 'Compare against A4 in your head — above or below middle?',
+  },
+  {
+    id: 'mc-click-level',
+    triggers: ['mascot-click'],
+    text: 'Every level adds colours to the same palette — trust earlier notes as anchors.',
+    detail: 'New notes borrow flavour from neighbours you already trained.',
+  },
+  {
+    id: 'mc-click-reset',
+    triggers: ['mascot-click'],
+    text: 'If you spiral, reset: listen → hum → answer. Same ritual every round.',
+    detail: 'Ritual kills anxiety; anxiety kills pitch.',
+  },
+  {
+    id: 'mc-click-mic',
+    triggers: ['mascot-click'],
+    text: 'Mic shy? Move in close — loudness helps pitch detectors trust you.',
+    detail: 'Quiet humming works too if you stay steady.',
+  },
+  {
+    id: 'mc-click-celebrate',
+    triggers: ['mascot-click'],
+    text: "I'm rooting for you — every bridge plank is your ear getting stronger.",
+    detail: 'Celebrate small wins; learning pitch is a marathon in neon sneakers.',
+  },
 ]
 
 /**
@@ -148,6 +240,47 @@ export function pickTipForMiss(
     return pool[1]
   }
   return pool[Math.floor(Math.random() * pool.length)]
+}
+
+export function pickMascotTip(
+  kind: 'hover' | 'click',
+  lastShownId: string | null,
+  ctx: MascotTipContext,
+): Tip {
+  const trig = kind === 'hover' ? 'mascot-hover' : 'mascot-click'
+  let pool = TIPS.filter((t) => t.triggers.includes(trig)).filter((t) => t.id !== lastShownId)
+  if (pool.length === 0) pool = TIPS.filter((t) => t.triggers.includes(trig))
+
+  if (kind === 'click') {
+    if (ctx.mode === 'sing') {
+      const singFirst = pool.find((t) => t.id === 'mc-click-sing')
+      if (singFirst && Math.random() < 0.45) pool = [singFirst, ...pool.filter((t) => t !== singFirst)]
+    }
+    if (ctx.mode === 'identify') {
+      const idFirst = pool.find((t) => t.id === 'mc-click-identify')
+      if (idFirst && Math.random() < 0.35) pool = [idFirst, ...pool.filter((t) => t !== idFirst)]
+    }
+  }
+
+  const tip =
+    pool[Math.floor(Math.random() * pool.length)] ??
+    pool[0] ??
+    TIPS[0]
+  const parts: string[] = []
+  if (tip.detail) parts.push(tip.detail)
+  if (ctx.mode === 'sing' && ctx.targetNote) {
+    parts.push(`You're singing toward ${prettyNote(ctx.targetNote)} — steady vowel, steady breath.`)
+  }
+  if (ctx.mode === 'identify') {
+    parts.push('In identify rounds, trust your first instinct after replaying the tone twice.')
+  }
+  if (ctx.streak !== undefined && ctx.streak >= 5) {
+    parts.push(`Streak ${ctx.streak} — you're on fire.`)
+  }
+  return {
+    ...tip,
+    detail: parts.join(' '),
+  }
 }
 
 export function pickTipFor(
