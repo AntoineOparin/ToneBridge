@@ -22,11 +22,9 @@ interface MasteryBridgeProps {
 
 /**
  * Level-up celebration. Side-on Three.js scene with two stone pillars (the
- * level you just cleared on the left, the next level on the right). The bridge
- * is broken; planks drop in from above with gravity + spin, settle with a
- * bounce, then a low-poly Forte walks across with a believable step cycle and
- * lights up the next pillar. Glowing glyphs of the newly unlocked notes float
- * up around it.
+ * level you just cleared on the left, the next level on the right). A low-poly
+ * Forte walks across with a believable step cycle and lights up the next pillar.
+ * Glowing glyphs of the newly unlocked notes float up around it.
  */
 export default function MasteryBridge({
   fromLevel,
@@ -165,46 +163,6 @@ export default function MasteryBridge({
     )
     scene.add(cable1, cable2)
 
-    // --- Planks with gravity-driven physics ----------------------------
-    const PLANK_COUNT = 11
-    const plankMat = new THREE.MeshStandardMaterial({
-      color: hex(colors.brand[700]),
-      roughness: 0.7,
-    })
-    const plankGeo = new THREE.BoxGeometry(0.78, 0.12, 1.2)
-
-    interface Plank {
-      mesh: THREE.Mesh
-      targetX: number
-      targetY: number
-      releaseAt: number
-      vy: number
-      vrot: number
-      rot: number
-      settled: boolean
-      bounceTime: number
-    }
-    const planks: Plank[] = []
-    const buildStartMs = 700
-    const plankIntervalMs = 180
-    for (let i = 0; i < PLANK_COUNT; i++) {
-      const mesh = new THREE.Mesh(plankGeo, plankMat)
-      const targetX = -3.5 + (i / (PLANK_COUNT - 1)) * 7.0
-      mesh.visible = false
-      scene.add(mesh)
-      planks.push({
-        mesh,
-        targetX,
-        targetY: 0.18,
-        releaseAt: buildStartMs + i * plankIntervalMs,
-        vy: 0,
-        vrot: (Math.random() - 0.5) * 4,
-        rot: (Math.random() - 0.5) * 1.2,
-        settled: false,
-        bounceTime: 0,
-      })
-    }
-
     // --- Forte (low-poly with leg meshes for a real step cycle) --------
     const forte = new THREE.Group()
     const forkMat = new THREE.MeshStandardMaterial({
@@ -300,9 +258,7 @@ export default function MasteryBridge({
     })
 
     // --- Timeline -------------------------------------------------------
-    const lastPlankReleaseMs = buildStartMs + (PLANK_COUNT - 1) * plankIntervalMs
-    const allSettledMs = lastPlankReleaseMs + 900
-    const walkStartMs = allSettledMs + 200
+    const walkStartMs = 800
     const walkDurationMs = 2000
     const igniteAtMs = walkStartMs + walkDurationMs
     const finishAtMs = igniteAtMs + 1800
@@ -316,42 +272,6 @@ export default function MasteryBridge({
       const elapsed = now - t0
       const dt = (now - lastFrame) / 1000
       lastFrame = now
-
-      // -- Plank physics: gravity drop with bounce-settle ---------------
-      for (const p of planks) {
-        if (elapsed < p.releaseAt) continue
-        if (!p.mesh.visible) {
-          p.mesh.visible = true
-          p.mesh.position.set(p.targetX + (Math.random() - 0.5) * 0.3, 4, 0)
-          p.mesh.rotation.set(0, 0, p.rot)
-          p.vy = 0
-        }
-        if (!p.settled) {
-          // Falling phase: gravity + slow horizontal correction toward target X.
-          p.vy += -9.8 * dt
-          p.mesh.position.y += p.vy * dt
-          p.mesh.position.x += (p.targetX - p.mesh.position.x) * Math.min(1, dt * 4)
-          p.rot += p.vrot * dt
-          p.vrot *= 0.92
-          p.mesh.rotation.z = p.rot
-
-          if (p.mesh.position.y <= p.targetY) {
-            p.mesh.position.y = p.targetY
-            p.settled = true
-            p.bounceTime = 0
-            p.vy = -p.vy * 0.35 // first small bounce
-          }
-        } else {
-          // Settle: under-damped spring back to y=targetY, rotation back to 0.
-          p.bounceTime += dt
-          const k = Math.exp(-p.bounceTime * 6)
-          const oscillation = Math.sin(p.bounceTime * 18) * 0.08 * k
-          p.mesh.position.y = p.targetY + oscillation
-          p.mesh.position.x += (p.targetX - p.mesh.position.x) * Math.min(1, dt * 8)
-          p.rot += (0 - p.rot) * Math.min(1, dt * 6)
-          p.mesh.rotation.z = p.rot
-        }
-      }
 
       // -- Forte standing / walking / arrived --------------------------
       const stridePeriod = 0.45
@@ -387,7 +307,6 @@ export default function MasteryBridge({
       }
 
       // -- Cap lighting ramps with progress ----------------------------
-      const buildProgress = Math.min(1, elapsed / allSettledMs)
       leftPillarLight.intensity = 4 + Math.sin(elapsed * 0.004) * 0.3
       const fromCol = (leftLevelLabel.material as THREE.SpriteMaterial).color
       fromCol.set(hex(colors.brand[400]))
@@ -425,8 +344,9 @@ export default function MasteryBridge({
           n.sprite.position.set(4 + n.offsetX, 2.4 + ns * 1.4, 0.4)
         })
       } else {
-        // Subtle build-progress glow on right pillar even before ignite.
-        rightPillarLight.intensity = 0.6 + buildProgress * 0.8
+        // Gentle idle glow on right pillar before ignite.
+        const preIgnite = Math.min(1, elapsed / walkStartMs)
+        rightPillarLight.intensity = 0.6 + preIgnite * 0.4
       }
 
       leftLevelLabel.position.y = 2.4 + Math.sin(elapsed * 0.002) * 0.06
