@@ -38,6 +38,9 @@ export default function Home() {
           <Link to="/multiplayer" className="text-surface-300 transition-colors hover:text-brand-400">
             Multiplayer
           </Link>
+          <Link to="/leaderboard" className="text-surface-300 transition-colors hover:text-brand-400">
+            Leaderboard
+          </Link>
           <Link to="/profile" className="text-surface-300 transition-colors hover:text-brand-400">
             Profile
           </Link>

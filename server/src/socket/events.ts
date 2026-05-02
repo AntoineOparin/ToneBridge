@@ -5,4 +5,6 @@ export const EVENTS = {
   ROUND_UPDATE: 'round_update',
   MATCH_END: 'match_end',
   LEAVE_ROOM: 'leave_room',
+  REMATCH_REQUEST: 'rematch_request',
+  REMATCH_DECLINED: 'rematch_declined',
 } as const

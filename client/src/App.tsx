@@ -8,6 +8,7 @@ import Learn from './pages/Learn'
 import Practice from './pages/Practice'
 import Multiplayer from './pages/Multiplayer'
 import Profile from './pages/Profile'
+import LeaderboardPage from './pages/Leaderboard'
 import Login from './pages/Login'
 import { useProgressSync } from './hooks/useProgressSync'
 import { useStore } from './store/useStore'
@@ -26,7 +27,8 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
+
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       // On explicit sign-out, wipe the local store so the next user gets a
@@ -40,6 +42,7 @@ export default function App() {
         })
       }
     })
+
     return () => listener.subscription.unsubscribe()
   }, [])
 
@@ -60,6 +63,7 @@ export default function App() {
         <Route path="/practice" element={<ProtectedRoute session={session}><Practice /></ProtectedRoute>} />
         <Route path="/multiplayer" element={<ProtectedRoute session={session}><Multiplayer /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute session={session}><Profile /></ProtectedRoute>} />
+        <Route path="/leaderboard" element={<ProtectedRoute session={session}><LeaderboardPage /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   )

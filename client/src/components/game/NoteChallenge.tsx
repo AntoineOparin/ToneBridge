@@ -29,6 +29,8 @@ interface NoteChallengeProps {
   onResult: (result: RoundResult) => void
   /** Round identifier — paired with the parent's `key` prop to force remount. */
   roundKey: number
+  /** When false, suppresses score/feedback popups (used in multiplayer). */
+  showPopup?: boolean
 }
 
 export default function NoteChallenge({
@@ -36,6 +38,7 @@ export default function NoteChallenge({
   target,
   pool,
   onResult,
+  showPopup = true,
 }: NoteChallengeProps) {
   const { playNote, playCorrect, playWrong } = useAudio()
   const pitch = usePitchDetection()
@@ -220,12 +223,14 @@ export default function NoteChallenge({
 
       <div className="relative">
         <NoteDisplay note={target} hidden={mode === 'identify' && !revealed} flash={feedback} />
-        <ScorePopup
-          show={popup.show}
-          amount={popup.amount}
-          variant={popup.variant}
-          message={popup.message}
-        />
+        {showPopup && (
+          <ScorePopup
+            show={popup.show}
+            amount={popup.amount}
+            variant={popup.variant}
+            message={popup.message}
+          />
+        )}
       </div>
 
       {mode === 'sing' ? (
