@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import NoteChallenge from '../components/game/NoteChallenge'
 import StreakCounter from '../components/game/StreakCounter'
 import Forte from '../components/character/Forte'
 import MasteryBridge from '../components/bridge/MasteryBridge'
+import BridgeProgress from '../components/bridge/BridgeProgress'
 import LevelTutorial from '../components/practice/LevelTutorial'
 import { useStore } from '../store/useStore'
 import { useTipBot } from '../hooks/useTipBot'
@@ -159,19 +160,12 @@ export default function Practice() {
             <h1 className="text-3xl font-black tracking-tight md:text-4xl">
               {level.title}
             </h1>
-            <div className="w-full max-w-md">
-              <div className="h-2 overflow-hidden rounded-full bg-surface-800">
-                <motion.div
-                  animate={{ width: `${pct}%` }}
-                  transition={{ type: 'spring', stiffness: 120, damping: 22 }}
-                  className="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-300"
-                />
-              </div>
-              <div className="mt-1.5 flex justify-between text-xs text-surface-400">
-                <span>{practice.levelXp} / {level.xpToComplete}</span>
-                <span>{pct}% to next bridge</span>
-              </div>
-            </div>
+            <BridgeProgress
+              progress={pct}
+              fromLevel={level.id}
+              toLevel={next?.id ?? null}
+              className="max-w-md"
+            />
           </div>
 
           <NotePool notes={level.notes} />

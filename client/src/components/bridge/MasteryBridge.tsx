@@ -486,12 +486,14 @@ export default function MasteryBridge({
           transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
           className="absolute top-10 z-10 text-center"
         >
-          <span className="block text-sm uppercase tracking-[0.4em] text-brand-400">
-            Level {fromLevel} cleared
-          </span>
-          <span className="mt-2 block text-5xl font-black tracking-tight text-white">
-            {fromTitle}
-          </span>
+          <div className="inline-block rounded-2xl border border-surface-800 bg-surface-900/60 px-8 py-4 backdrop-blur">
+            <span className="block text-sm uppercase tracking-[0.4em] text-brand-400">
+              Level {fromLevel} cleared
+            </span>
+            <span className="mt-2 block text-5xl font-black tracking-tight text-white">
+              {fromTitle}
+            </span>
+          </div>
         </motion.div>
 
         {toLevel && toTitle && (
@@ -500,17 +502,19 @@ export default function MasteryBridge({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 1.6 }}
-            className="absolute bottom-12 text-center text-surface-300"
+            className="absolute bottom-12 z-10 text-center"
           >
-            <span className="block text-xs uppercase tracking-[0.3em] text-surface-400">
-              Up next — Level {toLevel}
-            </span>
-            <span className="mt-1 block text-2xl font-bold text-brand-400">{toTitle}</span>
-            {newNotes.length > 0 && (
-              <span className="mt-1 block text-xs text-surface-400">
-                Adding {newNotes.map((n) => prettyNote(n)).join(', ')}
+            <div className="inline-block rounded-2xl border border-surface-800 bg-surface-900/60 px-8 py-4 backdrop-blur">
+              <span className="block text-xs uppercase tracking-[0.3em] text-surface-400">
+                Up next — Level {toLevel}
               </span>
-            )}
+              <span className="mt-1 block text-2xl font-bold text-brand-400">{toTitle}</span>
+              {newNotes.length > 0 && (
+                <span className="mt-1 block text-xs text-surface-400">
+                  Adding {newNotes.map((n) => prettyNote(n)).join(', ')}
+                </span>
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

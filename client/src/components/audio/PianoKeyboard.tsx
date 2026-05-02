@@ -25,7 +25,7 @@ export default function PianoKeyboard({
   onPick,
 }: PianoKeyboardProps) {
   return (
-    <div className="grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="flex w-full max-w-2xl flex-wrap justify-center gap-3">
       {options.map((note) => {
         const isCorrect = correctAnswer && note === correctAnswer
         const isWrongPick = userPick === note && correctAnswer && correctAnswer !== note
@@ -46,7 +46,7 @@ export default function PianoKeyboard({
             whileTap={disabled || showState ? undefined : { scale: 0.96 }}
             disabled={disabled || showState}
             onClick={() => onPick(note)}
-            className={`relative flex h-24 flex-col items-center justify-center rounded-2xl border-2 font-bold transition-colors ${stateClass} disabled:cursor-default`}
+            className={`relative flex h-24 min-w-[140px] flex-1 max-w-[180px] flex-col items-center justify-center rounded-2xl border-2 font-bold transition-colors ${stateClass} disabled:cursor-default`}
           >
             <span className="text-3xl">{prettyNote(note).slice(0, -1)}</span>
             <span className="text-xs font-medium opacity-70">octave {prettyNote(note).slice(-1)}</span>
