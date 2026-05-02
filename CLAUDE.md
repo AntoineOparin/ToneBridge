@@ -203,6 +203,39 @@ CLIENT_URL=http://localhost:5173
 
 ---
 
+## 🎨 Theme
+
+All UI colors live in `client/tailwind.config.js`. Do **not** hardcode hex values in components.
+
+### Tailwind scales
+
+| Scale | Purpose | Example usage |
+|---|---|---|
+| `brand-50` → `brand-900` | Amber/orange accents (CTAs, highlights, XP) | `bg-brand-500`, `text-brand-400` |
+| `surface-50` → `surface-950` | Slate grayscale (backgrounds, borders, text) | `bg-surface-900`, `text-surface-300` |
+| `accent-400` → `accent-500` | Blue accents (cool lighting, secondary actions) | `text-accent-400` |
+
+### Three.js + Tailwind
+
+Three.js cannot read Tailwind classes. Import the config and convert hex strings to numbers:
+
+```ts
+import tailwindConfig from '../../tailwind.config.js'
+
+const hex = (color: string) => parseInt(color.replace('#', ''), 16)
+const colors = tailwindConfig.theme.extend.colors
+
+// Usage
+new THREE.PointLight(hex(colors.brand[500]), 2, 20)
+```
+
+### Rules
+- Always prefer `brand-*` over raw amber/orange hexes.
+- Always prefer `surface-*` over raw slate/gray hexes.
+- If a new color is needed, add it to `tailwind.config.js` first — never inline a one-off hex.
+
+---
+
 ## ⚠️ Gotchas
 
 - **TypeScript**: never use `any` — if a type is unknown at call time, use `unknown` and narrow it; Socket.io payloads must be typed via generics or cast after validation
