@@ -218,4 +218,127 @@ Re-ran `npx tsc --noEmit` after merge. Pushed rebased `develop` to origin.
 
 ---
 
+### [15] Server healthcheck route
+
+**Prompt:**
+> Add a lightweight healthcheck endpoint at `GET /api/healthcheck` so deployment pipelines and monitors can verify the server is alive. It should return JSON with `{ status: "ok", uptime: <seconds> }`. Follow the existing Express router pattern in `server/src/routes/` and mount it alongside the other API routers in `index.ts`. Keep it stateless and dependency-free.
+
+**Files affected:**
+- `server/src/routes/healthcheck.ts` — new router
+- `server/src/index.ts` — mount at `/api/healthcheck`
+
+**Review notes:**
+Verified with `curl http://localhost:4000/api/healthcheck`. TypeScript strict mode passed.
+
+---
+
+### [16] Login page theme alignment
+
+**Prompt:**
+> Apply the ToneBridge Tailwind theme to the Login page. Replace hardcoded `bg-gray-950` and `text-gray-400` with `bg-surface-950` and `text-surface-400`. Use `text-brand-400` for the "Bridge" accent in the title. Restyle the Google sign-in button as a dark card (`bg-surface-800`, `border-surface-700`) with a hover glow to `brand-500/50`. Add Framer Motion staggered entrance animations matching the Landing page timing. Include a custom SVG bridge icon above the title. Also fix `Home.tsx` to use `bg-surface-950` and `text-surface-400` for consistency.
+
+**Files affected:**
+- `client/src/pages/Login.tsx`
+- `client/src/pages/Home.tsx`
+
+**Review notes:**
+Verified `npx tsc --noEmit` passes. The BridgeIcon SVG uses `currentColor` set to `text-brand-400` so it inherits the theme.
+
+---
+
+### [17] PianoKeyboard: adaptive centered layout
+
+**Prompt:**
+> Fix the multiple-choice piano tile layout so it centers and sizes itself to the exact number of options passed, rather than using a rigid `grid-cols-2 sm:grid-cols-4` that leaves gaps when fewer than 4 options are supplied. Switch the container to `flex flex-wrap justify-center` and give each key `min-w-[140px] flex-1 max-w-[180px]` so it naturally fills space. Keep the existing state styling (emerald for correct, red for wrong pick, surface for idle).
+
+**Files affected:**
+- `client/src/components/audio/PianoKeyboard.tsx`
+
+**Review notes:**
+Verified with `IDENTIFY_CHOICES = 4` in constants. Tiles now center in a single row on desktop and wrap gracefully on narrow screens.
+
+---
+
+### [18] Bridge component overhaul: BridgeScene, BridgeProgress, MasteryBridge polish
+
+**Prompt:**
+> The bridge components (`BridgeScene.tsx` and `BridgeProgress.tsx`) are empty TODO stubs. Implement them coherently with the app theme. `BridgeScene` should be a decorative SVG suspension bridge with pulsing pillar lights, suspension cables, and a mist overlay. `BridgeProgress` should replace the linear progress bar on the Practice page: an SVG with two stone pillars, suspension cables, and planks that light up in `brand-500` as the user's level progress increases. Include level labels on each pillar. For `MasteryBridge`, polish the overlay banners by wrapping them in `surface-900/60` backdrop-blur cards with `surface-800` borders so the text is readable over the Three.js canvas.
+
+**Files affected:**
+- `client/src/components/bridge/BridgeScene.tsx` — new SVG decorative bridge
+- `client/src/components/bridge/BridgeProgress.tsx` — new themed progress indicator
+- `client/src/components/bridge/MasteryBridge.tsx` — overlay card styling
+- `client/src/pages/Practice.tsx` — swap linear bar for `BridgeProgress`, remove unused `motion` import
+
+**Review notes:**
+Plank count set to 14 with staggered `framer-motion` transitions. Both BridgeScene and BridgeProgress use `surface-*` and `brand-*` colors exclusively. TypeScript passed.
+
+---
+
+### [19] MasteryBridge: dev replay control
+
+**Prompt:**
+> Add a replay mechanism to `MasteryBridge` so the level-up animation can be re-triggered during development without requiring a full level clear. Introduce a `replayCount` state that increments when a "Replay animation" button is clicked; wire this into the `useEffect` dependency array so the Three.js scene rebuilds. Reset `completedRef` on each replay so the full sequence plays again. Place the button in the top-right corner with `z-20` so it sits above the canvas.
+
+**Files affected:**
+- `client/src/components/bridge/MasteryBridge.tsx`
+
+**Review notes:**
+The cleanup function disposes the previous renderer and removes the old `<canvas>` from the DOM before the new effect runs, so there is no memory leak or duplicate canvas.
+
+---
+
+### [20] MasteryBridge: add visible bridge deck for Forte
+
+**Prompt:**
+> Forte appears to walk on air because there is no visible surface beneath him. Add a static bridge deck between the two pillars: a `BoxGeometry` spanning the gap at y ≈ 1.52, plus thin edge rails on both sides. Lower Forte's base Y position from 1.6 to 1.54 so his feet touch the deck. Replace the hardcoded `1.6` Y values in the animation loop with a `FORTE_Y` constant for maintainability.
+
+**Files affected:**
+- `client/src/components/bridge/MasteryBridge.tsx`
+
+**Review notes:**
+Deck material uses `surface-600` with high roughness to look like weathered stone. Rails at `surface-500` with slight metalness.
+
+---
+
+### [21] MasteryBridge: parabolic bridge deck + Forte follows the curve
+
+**Prompt:**
+> The current bridge deck is a straight horizontal slab, which looks unrealistic for a suspension bridge. Replace it with a segmented parabolic deck that sags in the middle (modeled as `deckY(x) = pillarTop - sin((x+4)/8 * PI) * sag`). Each segment should be a small `BoxGeometry` rotated to match the local slope of the curve, with edge rails rotated the same way. Update Forte's animation loop so his Y position tracks `deckY(x)` as he walks across, and add a slight forward `rotation.z` based on the deck's slope so he leans into the incline.
+
+**Files affected:**
+- `client/src/components/bridge/MasteryBridge.tsx`
+
+**Review notes:**
+`deckY` and `deckSlope` are helper functions defined inside the effect. Segment count is 20, which is smooth enough at the current camera distance. Step lift is reduced from 0.18 to 0.12 since the slope already provides natural vertical motion.
+
+---
+
+### [22] Auth routing: redirect logged-in users away from public landing pages
+
+**Prompt:**
+> Fix the client-side auth routing so authenticated users cannot see the Landing page (`/`) or Login page (`/login`) by manually typing the URL or using the back button. Introduce a `PublicOnlyRoute` wrapper component that redirects to `/home` when `session` is present. Apply it to both `/` and `/login`. Remove the redundant `useEffect` + `navigate` session checks inside `Login.tsx` since the router now handles the redirect before the component mounts.
+
+**Files affected:**
+- `client/src/App.tsx` — `PublicOnlyRoute` component + route wrapping
+- `client/src/pages/Login.tsx` — removed `useEffect` session redirect logic
+
+**Review notes:**
+The `useEffect` in `Login.tsx` was causing a brief flash of the login UI before redirecting. `PublicOnlyRoute` blocks render at the router level, so the flash is gone. Verified `Navigate` uses `replace` so back-button behavior is correct.
+
+---
+
+### [23] CORS troubleshooting: trailing slash in `CLIENT_URL`
+
+**Prompt:**
+> Multiplayer Socket.io polling is failing with a CORS error: the browser sends `Origin: http://localhost:5173` but the server responds with `Access-Control-Allow-Origin: http://localhost:5173/`. The mismatch causes a hard block. Investigate the server CORS configuration and the `.env` file. Fix the origin mismatch so the WebSocket handshake succeeds.
+
+**Files affected:**
+- `server/.env` — removed trailing slash from `CLIENT_URL`
+
+**Review notes:**
+Root cause: `dotenv` loaded `CLIENT_URL=http://localhost:5173/` verbatim, and both `cors` middleware and `socket.io` do exact string matching on the `origin` option. No code change needed; the server process must be restarted after editing `.env` since `dotenv/config` reads the file once at startup.
+
+---
+
 *Last updated: 2026-05-02*
