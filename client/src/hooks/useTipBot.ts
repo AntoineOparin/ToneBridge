@@ -1,28 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { pickTipFor, pickTipForMiss } from '../lib/tips'
-import type { MissPattern, NoteName, Tip } from '../types'
+import { pickMascotTip, pickTipFor, pickTipForMiss } from '../lib/tips'
+import type { MascotTipContext, MissPattern, NoteName, Tip } from '../types'
 
 interface UseTipBotResult {
-  /** The tip that should currently be displayed, or null when the mascot is silent. */
   tip: Tip | null
-  /** Show a contextual tip for a missed answer. */
   reportMiss: (note: NoteName, miss: MissPattern, recentMisses: MissPattern[]) => void
-  /** Trigger a fixed-context tip (lesson start, mastered, idle, etc.). */
   showContext: (
     trigger: 'lesson-start' | 'level-up' | 'first-correct' | 'idle',
     context?: { note?: NoteName },
   ) => void
-  /** Manually clear the bubble. */
+  /** Tap Forte on Practice — coaching tips only (hover is local UI, not this). */
+  mascotClick: (ctx: MascotTipContext) => void
   clear: () => void
 }
 
 const TIP_DURATION_MS = 6500
 const IDLE_INTERVAL_MS = 45_000
 
-/**
- * The mascot's brain: chooses tips, debounces them, escalates after
- * repeated mistakes, and emits gentle idle banter when the user pauses.
- */
 export function useTipBot(): UseTipBotResult {
   const [tip, setTip] = useState<Tip | null>(null)
   const lastIdRef = useRef<string | null>(null)
@@ -71,6 +65,17 @@ export function useTipBot(): UseTipBotResult {
     [queueDismiss, resetIdle],
   )
 
+  const mascotClick = useCallback(
+    (ctx: MascotTipContext) => {
+      const next = pickMascotTip('click', lastIdRef.current, ctx)
+      lastIdRef.current = next.id
+      setTip(next)
+      queueDismiss()
+      resetIdle()
+    },
+    [queueDismiss, resetIdle],
+  )
+
   const clear = useCallback(() => {
     if (dismissTimerRef.current !== null) clearTimeout(dismissTimerRef.current)
     setTip(null)
@@ -84,5 +89,5 @@ export function useTipBot(): UseTipBotResult {
     }
   }, [resetIdle])
 
-  return { tip, reportMiss, showContext, clear }
+  return { tip, reportMiss, showContext, mascotClick, clear }
 }

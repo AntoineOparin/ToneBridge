@@ -18,7 +18,7 @@ import {
 } from '../lib/curriculum'
 import { MAX_LEVEL } from '../lib/constants'
 import { classifyMiss, prettyNote } from '../lib/noteUtils'
-import type { NoteName, PracticeMode, RoundResult } from '../types'
+import type { MascotTipContext, NoteName, PracticeMode, RoundResult } from '../types'
 
 type Phase = 'tutorial' | 'practice' | 'level-up'
 
@@ -54,6 +54,20 @@ export default function Practice() {
   const previousTargetRef = useRef<NoteName | null>(null)
   const introducedLevelRef = useRef<number | null>(null)
   const firstCorrectShownRef = useRef(false)
+  const mascotCtxRef = useRef<MascotTipContext>({})
+
+  useEffect(() => {
+    mascotCtxRef.current = {
+      mode,
+      targetNote: target,
+      levelId: level.id,
+      streak: practice.streak,
+    }
+  }, [mode, target, level.id, practice.streak])
+
+  const onMascotClick = useCallback(() => {
+    tipBot.mascotClick(mascotCtxRef.current)
+  }, [tipBot])
 
   const pickNextRound = useCallback(() => {
     const t = pickTarget(practice, previousTargetRef.current)
@@ -214,6 +228,8 @@ export default function Practice() {
         tip={phase === 'practice' ? tipBot.tip : null}
         onDismiss={tipBot.clear}
         mood={resolveMood(phase, target, practice)}
+        interactive={phase === 'practice'}
+        onMascotClick={onMascotClick}
       />
     </div>
   )

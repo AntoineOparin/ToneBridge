@@ -66,9 +66,26 @@ export interface PracticeProgress {
   tutorialCompleted: number[]
 }
 
+export type TipTrigger =
+  | MissPattern
+  | 'idle'
+  | 'lesson-start'
+  | 'level-up'
+  | 'first-correct'
+  | 'mascot-hover'
+  | 'mascot-click'
+
 export interface Tip {
   id: string
-  triggers: Array<MissPattern | 'idle' | 'lesson-start' | 'level-up' | 'first-correct'>
+  triggers: TipTrigger[]
   text: string
   detail?: string
+}
+
+/** Context passed when the user interacts with Forte on the Practice page. */
+export interface MascotTipContext {
+  mode?: PracticeMode
+  targetNote?: NoteName | null
+  levelId?: number
+  streak?: number
 }
