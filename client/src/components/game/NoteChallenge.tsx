@@ -8,10 +8,10 @@ import ScorePopup from './ScorePopup'
 import { useAudio } from '../../hooks/useAudio'
 import { usePitchDetection } from '../../hooks/usePitchDetection'
 import {
+  buildIdentifyOptionSet,
   centDeviation,
   hzToNote,
   parseNote,
-  pickDistractors,
 } from '../../lib/noteUtils'
 import {
   IDENTIFY_CHOICES,
@@ -60,12 +60,7 @@ export default function NoteChallenge({
   // shuffle). Lazy `useState` is the canonical place for impure setup work.
   const [identifyOptions] = useState<NoteName[]>(() => {
     if (mode !== 'identify') return []
-    const opts = [...pickDistractors(target, pool, IDENTIFY_CHOICES - 1), target]
-    for (let i = opts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[opts[i], opts[j]] = [opts[j], opts[i]]
-    }
-    return opts
+    return buildIdentifyOptionSet(target, pool, IDENTIFY_CHOICES)
   })
 
   const [startTime] = useState<number>(() => Date.now())

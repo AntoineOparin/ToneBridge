@@ -90,37 +90,33 @@ export function classifyMiss(target: NoteName, answer: NoteName | null, centsOff
   return 'random'
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const out = [...arr]
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[out[i], out[j]] = [out[j], out[i]]
+  }
+  return out
+}
+
 /**
- * Pick `count` distinct distractor notes for the identify mode. Distractors are
- * drawn from notes the user has already encountered so the pool always feels
- * familiar; if not enough are available we fall back to neighbours of `target`.
+ * Build the multiple-choice set for identify mode. **Only notes from `pool`**
+ * ever appear — never neighbours from outside the current practice set.
+ * If the pool is smaller than `maxChoices`, every practising note is shown.
  */
-export function pickDistractors(
+export function buildIdentifyOptionSet(
   target: NoteName,
   pool: NoteName[],
-  count: number,
+  maxChoices: number,
 ): NoteName[] {
-  const candidates = new Set<NoteName>()
-  for (const n of pool) {
-    if (n !== target) candidates.add(n)
+  const unique = [...new Set(pool)]
+  if (unique.length <= maxChoices) {
+    return shuffleArray(unique)
   }
-
-  if (candidates.size < count) {
-    const targetMidi = parseNote(target).midi
-    for (let offset = 1; candidates.size < count + 1 && offset <= 12; offset++) {
-      const up = midiToNoteName(targetMidi + offset)
-      const down = midiToNoteName(targetMidi - offset)
-      if (up !== target) candidates.add(up)
-      if (down !== target) candidates.add(down)
-    }
-  }
-
-  const arr = Array.from(candidates)
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr.slice(0, count)
+  const others = unique.filter((n) => n !== target)
+  const distractorCount = maxChoices - 1
+  const picked = shuffleArray(others).slice(0, distractorCount)
+  return shuffleArray([target, ...picked])
 }
 
 /** Pretty-print a note with proper sharp glyph (e.g. "C#4" → "C♯4"). */
