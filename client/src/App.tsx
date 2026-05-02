@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 import type { Session } from '@supabase/supabase-js'
@@ -10,7 +10,7 @@ import Multiplayer from './pages/Multiplayer'
 import Profile from './pages/Profile'
 import Login from './pages/Login'
 
-function ProtectedRoute({ session, children }: { session: Session | null; children: JSX.Element }) {
+function ProtectedRoute({ session, children }: { session: Session | null; children: ReactNode }) {
   if (!session) return <Navigate to="/login" replace />
   return children
 }
