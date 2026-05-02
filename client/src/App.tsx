@@ -19,6 +19,11 @@ function ProtectedRoute({ session, children }: { session: Session | null; childr
   return children
 }
 
+function PublicOnlyRoute({ session, children }: { session: Session | null; children: ReactNode }) {
+  if (session) return <Navigate to="/home" replace />
+  return children
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
@@ -56,8 +61,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PublicOnlyRoute session={session}><Landing /></PublicOnlyRoute>} />
+        <Route path="/login" element={<PublicOnlyRoute session={session}><Login /></PublicOnlyRoute>} />
         <Route path="/home" element={<ProtectedRoute session={session}><Home /></ProtectedRoute>} />
         <Route path="/learn" element={<ProtectedRoute session={session}><Learn /></ProtectedRoute>} />
         <Route path="/practice" element={<ProtectedRoute session={session}><Practice /></ProtectedRoute>} />

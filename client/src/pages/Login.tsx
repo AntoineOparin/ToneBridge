@@ -1,24 +1,10 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Login() {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate('/')
-    })
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate('/')
-    })
-
-    return () => listener.subscription.unsubscribe()
-  }, [navigate])
 
   async function handleGoogleLogin() {
     setLoading(true)
