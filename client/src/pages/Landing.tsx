@@ -2,10 +2,9 @@ import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import * as THREE from 'three'
 import { Link } from 'react-router-dom'
-import tailwindConfig from '../../tailwind.config.js'
+import { colors } from '../lib/theme'
 
 const hex = (color: string) => parseInt(color.replace('#', ''), 16)
-const colors = tailwindConfig.theme.extend.colors
 
 export default function Landing() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
