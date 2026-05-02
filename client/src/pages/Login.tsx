@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 
 export default function Login() {
@@ -32,36 +33,115 @@ export default function Login() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950">
-      <div className="flex flex-col items-center gap-8">
-        <div className="text-center">
-          <h1 className="text-5xl font-bold text-white tracking-tight">ToneBridge</h1>
-          <p className="text-gray-400 mt-2 text-lg">Train your perfect pitch</p>
-        </div>
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+    },
+  }
 
-        <button
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const },
+    },
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-surface-950">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col items-center gap-8 px-6"
+      >
+        <motion.div variants={itemVariants} className="text-center">
+          <div className="flex justify-center mb-4">
+            <BridgeIcon />
+          </div>
+          <h1 className="text-5xl font-black text-white tracking-tight">
+            Tone<span className="text-brand-400">Bridge</span>
+          </h1>
+          <p className="text-surface-400 mt-2 text-lg">
+            Bridge the gap to perfect pitch
+          </p>
+        </motion.div>
+
+        <motion.button
+          variants={itemVariants}
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="flex items-center gap-3 bg-white text-gray-900 font-semibold px-6 py-3 rounded-xl shadow-lg hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          className="flex items-center gap-3 bg-surface-800 text-white font-semibold px-6 py-3 rounded-xl border border-surface-700 hover:border-brand-500/50 hover:bg-surface-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
         >
           <GoogleIcon />
           {loading ? 'Redirecting...' : 'Continue with Google'}
-        </button>
+        </motion.button>
 
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-      </div>
+        {error && (
+          <motion.p
+            variants={itemVariants}
+            className="text-red-400 text-sm text-center max-w-xs"
+          >
+            {error}
+          </motion.p>
+        )}
+
+        <motion.p
+          variants={itemVariants}
+          className="text-surface-500 text-xs text-center max-w-xs"
+        >
+          By signing in, you agree to our Terms of Service and Privacy Policy.
+        </motion.p>
+      </motion.div>
     </div>
+  )
+}
+
+function BridgeIcon() {
+  return (
+    <svg
+      width="64"
+      height="64"
+      viewBox="0 0 64 64"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="text-brand-400"
+    >
+      <path
+        d="M8 48C8 48 16 32 32 32C48 32 56 48 56 48"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 48V56M20 48V56M44 48V56M52 48V56"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <circle cx="32" cy="24" r="6" stroke="currentColor" strokeWidth="3" />
+      <path
+        d="M32 18V12M28 14L24 10M36 14L40 10"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   )
 }
 
 function GoogleIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 48 48">
-      <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.7 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z"/>
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.4 6.3 14.7z"/>
-      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.5 35.5 26.9 36 24 36c-5.2 0-9.6-2.9-11.3-7L6 33.5C9.4 39.5 16.2 44 24 44z"/>
-      <path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.5 35.5 44 30.2 44 24c0-1.3-.1-2.7-.4-4z"/>
+      <path fill="#FFC107" d="M43.6 20H24v8h11.3C33.7 33.1 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.1-4z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34.1 6.5 29.3 4 24 4 16.3 4 9.7 8.4 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-1.9 13.5-5l-6.2-5.2C29.5 35.5 26.9 36 24 36c-5.2 0-9.6-2.9-11.3-7L6 33.5C9.4 39.5 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20H24v8h11.3c-.9 2.5-2.6 4.6-4.8 6l6.2 5.2C40.5 35.5 44 30.2 44 24c0-1.3-.1-2.7-.4-4z" />
     </svg>
   )
 }
