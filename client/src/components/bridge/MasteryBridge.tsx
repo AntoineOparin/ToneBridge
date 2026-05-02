@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import * as THREE from 'three'
 import { colors } from '../../lib/theme'
@@ -36,8 +36,10 @@ export default function MasteryBridge({
 }: MasteryBridgeProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const completedRef = useRef(false)
+  const [replayCount, setReplayCount] = useState(0)
 
   useEffect(() => {
+    completedRef.current = false
     const container = containerRef.current
     if (!container) return
 
@@ -163,6 +165,60 @@ export default function MasteryBridge({
     )
     scene.add(cable1, cable2)
 
+    // --- Parabolic bridge deck ------------------------------------------
+    const deckMat = new THREE.MeshStandardMaterial({
+      color: hex(colors.surface[600]),
+      roughness: 0.9,
+      metalness: 0.05,
+    })
+    const railMat = new THREE.MeshStandardMaterial({
+      color: hex(colors.surface[500]),
+      roughness: 0.7,
+      metalness: 0.3,
+    })
+
+    const PILLAR_TOP = 1.45
+    const SAG = 0.55
+    const deckY = (x: number) => PILLAR_TOP - Math.sin(((x + 4) / 8) * Math.PI) * SAG
+    const deckSlope = (x: number) => {
+      const dt = 0.001
+      return (deckY(x + dt) - deckY(x - dt)) / (2 * dt)
+    }
+
+    const SEGMENTS = 20
+    const segWidth = 7.0 / SEGMENTS
+    const deckSegments: THREE.Mesh[] = []
+    for (let i = 0; i < SEGMENTS; i++) {
+      const x = -3.5 + (i + 0.5) * segWidth
+      const y = deckY(x)
+      const slope = deckSlope(x)
+      const seg = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.02, 0.08, 1.2), deckMat)
+      seg.position.set(x, y, 0.2)
+      seg.rotation.z = Math.atan(slope)
+      scene.add(seg)
+      deckSegments.push(seg)
+
+      const railH = 0.06
+      const railYOffset = 0.06 + railH / 2
+      const railLX = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.02, railH, 0.04), railMat)
+      railLX.position.set(
+        x - Math.sin(Math.atan(slope)) * railYOffset,
+        y + Math.cos(Math.atan(slope)) * railYOffset,
+        0.74,
+      )
+      railLX.rotation.z = Math.atan(slope)
+      scene.add(railLX)
+
+      const railRX = new THREE.Mesh(new THREE.BoxGeometry(segWidth + 0.02, railH, 0.04), railMat)
+      railRX.position.set(
+        x - Math.sin(Math.atan(slope)) * railYOffset,
+        y + Math.cos(Math.atan(slope)) * railYOffset,
+        -0.34,
+      )
+      railRX.rotation.z = Math.atan(slope)
+      scene.add(railRX)
+    }
+
     // --- Forte (low-poly with leg meshes for a real step cycle) --------
     const forte = new THREE.Group()
     const forkMat = new THREE.MeshStandardMaterial({
@@ -212,7 +268,7 @@ export default function MasteryBridge({
     legR.position.x = 0.09
 
     forte.add(body, head, prongL, prongR, eyeL, eyeR, bowtie, legL, legR)
-    forte.position.set(-4, 1.6, 0)
+    forte.position.set(-4, deckY(-4) + 0.02, 0)
     forte.scale.setScalar(0.85)
     scene.add(forte)
 
@@ -276,23 +332,30 @@ export default function MasteryBridge({
       // -- Forte standing / walking / arrived --------------------------
       const stridePeriod = 0.45
       if (elapsed < walkStartMs) {
-        forte.position.y = 1.6 + Math.sin(elapsed * 0.005) * 0.04
+        const x0 = forte.position.x
+        const y0 = deckY(x0)
+        forte.position.y = y0 + 0.02 + Math.sin(elapsed * 0.005) * 0.04
         legL.rotation.x = 0
         legR.rotation.x = 0
       } else if (elapsed < igniteAtMs) {
         const t = (elapsed - walkStartMs) / walkDurationMs
         // ease-in-out cubic for smooth start/stop
         const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-        forte.position.x = -4 + 8 * eased
+        const x = -4 + 8 * eased
+        forte.position.x = x
+
+        // Follow the parabolic deck height.
+        const deckHeight = deckY(x)
 
         // Step bounce — quick vertical hop on each stride.
         const strideT = ((elapsed - walkStartMs) / 1000) % stridePeriod
         const stride = strideT / stridePeriod
-        const stepLift = Math.abs(Math.sin(stride * Math.PI)) * 0.18
-        forte.position.y = 1.6 + stepLift
+        const stepLift = Math.abs(Math.sin(stride * Math.PI)) * 0.12
+        forte.position.y = deckHeight + 0.02 + stepLift
 
-        // Lean very slightly forward into the walk.
-        forte.rotation.z = Math.sin(elapsed * 0.013) * 0.04
+        // Slight forward lean into the slope.
+        const slope = deckSlope(x)
+        forte.rotation.z = slope * 0.3 + Math.sin(elapsed * 0.013) * 0.02
 
         // Leg swing — opposing pendulum.
         const swing = Math.sin(stride * Math.PI * 2) * 0.55
@@ -300,7 +363,8 @@ export default function MasteryBridge({
         legR.rotation.x = -swing
       } else {
         forte.position.x = 4
-        forte.position.y = 1.6 + Math.sin(elapsed * 0.005) * 0.04
+        const yEnd = deckY(4)
+        forte.position.y = yEnd + 0.02 + Math.sin(elapsed * 0.005) * 0.04
         forte.rotation.z = 0
         legL.rotation.x = 0
         legR.rotation.x = 0
@@ -388,7 +452,7 @@ export default function MasteryBridge({
         container.removeChild(renderer.domElement)
       }
     }
-  }, [fromLevel, toLevel, newNotes, onComplete])
+  }, [fromLevel, toLevel, newNotes, onComplete, replayCount])
 
   return (
     <motion.div
@@ -398,6 +462,14 @@ export default function MasteryBridge({
       transition={{ duration: 0.4 }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface-950/90 backdrop-blur-sm"
     >
+      {/* Dev replay control */}
+      <button
+        onClick={() => setReplayCount((c) => c + 1)}
+        className="absolute top-4 right-4 z-20 rounded-lg border border-surface-700 bg-surface-800/80 px-3 py-1.5 text-xs font-semibold text-surface-300 backdrop-blur transition-colors hover:border-brand-500 hover:text-brand-400"
+      >
+        Replay animation
+      </button>
+
       <AnimatePresence>
         <motion.div
           key="banner"
