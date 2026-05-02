@@ -21,6 +21,8 @@ export interface RoundResult {
   outcome: RoundOutcome
   timeMs: number
   centsOff: number | null
+  /** User pressed Skip — shown as “Skipped” in UI instead of “Try again”. */
+  skipped?: boolean
 }
 
 export type MissPattern =

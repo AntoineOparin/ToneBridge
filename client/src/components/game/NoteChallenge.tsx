@@ -82,9 +82,14 @@ export default function NoteChallenge({
         show: true,
         amount,
         variant: result.outcome === 'correct' ? 'correct' : 'wrong',
-        message: result.outcome === 'incorrect' && result.answer
-          ? `That was ${result.answer.replace('#', '♯')}`
-          : undefined,
+        message:
+          result.outcome === 'incorrect'
+            ? result.skipped
+              ? 'Skipped'
+              : result.answer
+                ? `That was ${result.answer.replace('#', '♯')}`
+                : undefined
+            : undefined,
       })
       if (result.outcome === 'correct') void playCorrect()
       else void playWrong()
@@ -184,6 +189,7 @@ export default function NoteChallenge({
       outcome: 'incorrect',
       timeMs: Date.now() - startTime,
       centsOff: null,
+      skipped: true,
     })
   }, [finish, mode, target, startTime])
 
@@ -221,17 +227,21 @@ export default function NoteChallenge({
     <div className="relative flex w-full flex-col items-center gap-8">
       <ModeBadge mode={mode} />
 
-      <div className="relative">
-        <NoteDisplay note={target} hidden={mode === 'identify' && !revealed} flash={feedback} />
-        {showPopup && (
+      <NoteDisplay note={target} hidden={mode === 'identify' && !revealed} flash={feedback} />
+
+      {showPopup && (
+        <div
+          className="flex min-h-[3rem] w-full max-w-lg shrink-0 items-center justify-center px-2 sm:min-h-[3.5rem]"
+          aria-live="polite"
+        >
           <ScorePopup
             show={popup.show}
             amount={popup.amount}
             variant={popup.variant}
             message={popup.message}
           />
-        )}
-      </div>
+        </div>
+      )}
 
       {mode === 'sing' ? (
         <div className="flex w-full flex-col items-center gap-5">
