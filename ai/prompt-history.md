@@ -133,16 +133,88 @@ Skip is detected when `outcome === 'incorrect' && result.answer === null` — th
 
 ---
 
-### [9] Project README and AI disclosure
+
+### [9] Practice mascot (Forte): calmer coaching UX + API cleanup
 
 **Prompt:**
-> Write a complete `README.md` at the repo root suitable for DawsHacks judging. Include: project description, how it connects to the Bridges theme, full feature list, tech stack table, architecture diagrams (pitch detection pipeline, socket event flow, file structure), local setup instructions with env vars and migration order, team roles, and an honest AI usage disclosure section. Also answer the hackathon's guiding questions.
+> Rework the Practice page mascot so it feels less noisy. Coaching tips should come **only** from an explicit tap on Forte, not from hover timers or dwell logic. Hover should do nothing server-side: keep a tiny local UI affordance (e.g. a small “hello” bubble above the sprite) so we don’t spam `useTipBot`. Remove `mascotInteract` / hover plumbing in favor of a single `mascotClick(ctx)` entry point. Render tip content in a **fixed side panel** (not a centered toast) so identify rounds and the piano keyboard stay unobstructed. Update `Practice.tsx` so it calls `mascotClick` with a stable context ref (`mode`, `targetNote`, `levelId`, `streak`) and drops any dead `onMascotHover` props.
 
 **Files affected:**
-- `README.md` (created)
+- `client/src/hooks/useTipBot.ts` — `mascotClick`, removed hover-driven mascot tips
+- `client/src/components/character/Forte.tsx` — side aside for tips, hello-on-hover only, happy avatars for tip chrome
+- `client/src/pages/Practice.tsx` — `onMascotClick` wiring
 
 **Review notes:**
-Reviewed all sections. Updated team roles table to reflect actual work split. AI disclosure is honest and specific — lists which areas Claude assisted with and clarifies that all code was reviewed before merging.
+Confirmed tip IDs starting with `mc-` still route through `pickMascotTip('click', …)`. Verified Forte bottom-right button uses a consistent happy face so mood heuristics don’t fight the art direction.
+
+---
+
+### [10] Identify mode: stable reference playback + avatar polish
+
+**Prompt:**
+> In **Name the note** (`mode === 'identify'`), the synthesized reference pitch must fire **once** shortly after the round mounts, and **only again** when the user clicks Replay — never on unrelated React renders (e.g. tip bot state, streak HUD updates). Root cause: an effect depended on the entire `useAudio()` object, which is reallocated every render, so the scheduled `playNote` kept rescheduling. Fix by destructuring `{ playNote }` and listing **only** `[mode, target, playNote]` (plus round remount via parent `key`). Use the same `playNote`-based handler for both initial tutorial-style playback and the Replay button. Also stop showing a “concerned” mouth on the interactive mascot when per-note stats are rough; use **happy** for the corner button and tip-card avatars so it matches the coaching tone.
+
+**Files affected:**
+- `client/src/components/game/NoteChallenge.tsx` — `playNote` / `playCorrect` / `playWrong` destructuring; identify `useEffect` deps; replay handler reuse
+- `client/src/components/character/Forte.tsx` — avatar mood overrides
+
+**Review notes:**
+Ran `tsc` after dependency fix. Singing mode still gates “Sing it” on `hasPlayed` via the same reference pipeline.
+
+---
+
+### [11] Round feedback row: `ScorePopup` placement + skip labeling
+
+**Prompt:**
+> Move post-answer feedback (`ScorePopup`: “+10 XP”, “That was …”, “Try again”) out of an absolutely centered layer on top of `NoteDisplay`. It currently blocks the big card and the multiple-choice tiles. Render it in a **dedicated horizontal strip** between the note display and the control row (Replay / Skip / piano), with sensible `min-height`, `max-width`, and smaller type for long wrong-note strings. Extend `RoundResult` with an optional `skipped?: boolean` set only from `handleSkip`. When true, the popup string must read **“Skipped”**, not the generic wrong-answer fallback.
+
+**Files affected:**
+- `client/src/components/game/ScorePopup.tsx` — flow layout, responsive font sizing / `line-clamp` behavior
+- `client/src/components/game/NoteChallenge.tsx` — feedback strip; `finish()` message logic; `skipped: true` on skip
+- `client/src/types/index.ts` — `skipped?: boolean` on `RoundResult`
+
+**Review notes:**
+Later merged with upstream `showPopup?: boolean` (multiplayer hides popups): wrap the **entire** feedback strip in `showPopup` so Duel mode doesn’t reserve dead vertical space.
+
+---
+
+### [12] Home page: grid balance for Learn card + dev control removal + copy pass
+
+**Prompt:**
+> The Learn (“Pitch theory & technique”) tile used `md:col-span-3`, so it read as a full-width banner and dwarfed the 1-column Profile / Multiplayer cards. Resize it to **`md:col-span-2`** so row two mirrors the 2:1 split of row one (Practice vs Multiplayer). Keep internal layout responsive (`flex-col` on phones, row alignment from `sm` up), shorten body copy, and use `line-clamp` so height stays aligned with adjacent cards. Remove the temporary **“Play bridge animation”** dev button and the inline `MasteryBridge` preview overlay from Home. Rewrite hero and card blurbs in plain, non-marketing language and **avoid em dashes** in user-visible strings.
+
+**Files affected:**
+- `client/src/pages/Home.tsx`
+
+**Review notes:**
+Purged unused `useState` / `AnimatePresence` / `MasteryBridge` import after removing the dev overlay.
+
+---
+
+### [13] Git: sync `develop`, resolve `NoteChallenge` rebase conflict
+
+**Prompt:**
+> Pull latest `origin/develop`, push local commits. During `git pull --rebase`, `client/src/components/game/NoteChallenge.tsx` conflicted: upstream added `showPopup?: boolean` to suppress `ScorePopup` in multiplayer, while our branch moved `ScorePopup` into a dedicated strip below `NoteDisplay`. Resolve by **keeping both behaviors**: retain the refactored layout and wrap the feedback strip in `{showPopup && (…)}` so Duel passes `showPopup={false}` without restoring the old centered overlay.
+
+**Files affected:**
+- `client/src/components/game/NoteChallenge.tsx` (conflict resolution only)
+
+**Review notes:**
+Re-ran `npx tsc --noEmit` after merge. Pushed rebased `develop` to origin.
+
+---
+
+### [14] Mobile layout experiment (reverted)
+
+**Prompt:**
+> Run a full client pass for small viewports: shared responsive header, tighter hero type scale, `PianoKeyboard` as a 2×2 / 4-column grid, Forte tips anchored for narrow screens, safe-area padding, `StreakCounter` density, MasteryBridge / LevelTutorial overflow. **Follow-up:** revert that entire changeset — keep the tree aligned with desktop-first layout; only retain separate bugfixes (e.g. `playNote` stable deps) where they were merged independently.
+
+**Files affected:**
+- (Reverted) would have touched `SiteHeader` (since deleted), `index.css`, many `px-*` / `Forte` / `PianoKeyboard` files
+- **Retained elsewhere:** `NoteChallenge` / `useAudio` patterns from other tasks
+
+**Review notes:**
+`git restore` on the feature branch; removed untracked `client/src/components/layout/`. No mobile-specific code left in `develop` from that experiment.
 
 ---
 
