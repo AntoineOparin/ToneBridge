@@ -347,9 +347,6 @@ function MasteryRow({ note, stats, mastery }: MasteryRowProps) {
         <div className="mt-1 flex gap-3 text-[11px] text-surface-400">
           <span>{stats.correct} ✓</span>
           <span>{stats.incorrect} ✗</span>
-          {stats.recentMisses.length > 0 && (
-            <span>recent: {stats.recentMisses.slice(-3).join(', ')}</span>
-          )}
         </div>
       </div>
     </li>
