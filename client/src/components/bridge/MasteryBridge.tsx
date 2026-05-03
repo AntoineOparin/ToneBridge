@@ -320,13 +320,11 @@ export default function MasteryBridge({
     const finishAtMs = igniteAtMs + 1800
 
     const t0 = performance.now()
-    let lastFrame = t0
     let raf = 0
 
     const animate = () => {
       const now = performance.now()
       const elapsed = now - t0
-      lastFrame = now
 
       // -- Forte standing / walking / arrived --------------------------
       const stridePeriod = 0.45
