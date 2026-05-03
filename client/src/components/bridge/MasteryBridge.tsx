@@ -326,7 +326,6 @@ export default function MasteryBridge({
     const animate = () => {
       const now = performance.now()
       const elapsed = now - t0
-      const dt = (now - lastFrame) / 1000
       lastFrame = now
 
       // -- Forte standing / walking / arrived --------------------------
