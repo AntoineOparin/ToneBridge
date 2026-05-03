@@ -246,13 +246,10 @@ export default function NoteChallenge({
       {mode === 'sing' ? (
         <div className="flex w-full flex-col items-center gap-5">
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button variant="secondary" onClick={handlePlayReference}>
-              {hasPlayed ? 'Hear it again' : 'Hear the note'}
-            </Button>
             <Button
               variant="primary"
               onClick={handleStartSinging}
-              disabled={singing || !hasPlayed}
+              disabled={singing}
             >
               {singing ? 'Listening…' : 'Sing it'}
             </Button>
